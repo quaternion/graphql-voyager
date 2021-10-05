@@ -1,40 +1,43 @@
-import { getIntrospectionQuery } from 'graphql/utilities';
+import './viewport.css'
+import './Voyager.css'
 
-import { getSchema, extractTypeId } from '../introspection';
-import { SVGRender, getTypeGraph } from '../graph/';
-import { WorkerCallback } from '../utils/types';
+import { MuiThemeProvider } from '@material-ui/core/styles'
+import { getIntrospectionQuery } from 'graphql/utilities'
+import * as PropTypes from 'prop-types'
+import * as React from 'react'
 
-import * as React from 'react';
-import * as PropTypes from 'prop-types';
-import { theme } from './MUITheme';
-import { MuiThemeProvider } from '@material-ui/core/styles';
-
-import GraphViewport from './GraphViewport';
-import DocExplorer from './doc-explorer/DocExplorer';
-import PoweredBy from './utils/PoweredBy';
-import Settings from './settings/Settings';
-
-import './Voyager.css';
-import './viewport.css';
+import { getTypeGraph, SVGRender } from '../graph/'
+import { extractTypeId, getSchema } from '../introspection'
+import { WorkerCallback } from '../utils/types'
+import DocExplorer from './doc-explorer/DocExplorer'
+import GraphViewport from './GraphViewport'
+import { theme } from './MUITheme'
+import Settings from './settings/Settings'
+import PoweredBy from './utils/PoweredBy'
 
 type IntrospectionProvider = (query: string) => Promise<any>;
 
 export interface VoyagerDisplayOptions {
   rootType?: string;
-  skipRelay?: boolean;
   skipDeprecated?: boolean;
   showLeafFields?: boolean;
   sortByAlphabet?: boolean;
   hideRoot?: boolean;
+  hideRules?: {
+    pattern: string
+    proxyField?: string
+  }[]
+  showHidden?: boolean
 }
 
-const defaultDisplayOptions = {
+const defaultDisplayOptions: VoyagerDisplayOptions = {
   rootType: undefined,
-  skipRelay: true,
   skipDeprecated: true,
   sortByAlphabet: false,
   showLeafFields: true,
   hideRoot: false,
+  hideRules: [],
+  showHidden: false
 };
 
 function normalizeDisplayOptions(options) {
@@ -62,11 +65,15 @@ export default class Voyager extends React.Component<VoyagerProps> {
     ]).isRequired,
     displayOptions: PropTypes.shape({
       rootType: PropTypes.string,
-      skipRelay: PropTypes.bool,
       skipDeprecated: PropTypes.bool,
       sortByAlphabet: PropTypes.bool,
       hideRoot: PropTypes.bool,
       showLeafFields: PropTypes.bool,
+      showHidden: PropTypes.bool,
+      hideRules: PropTypes.arrayOf(PropTypes.shape({
+        pattern: PropTypes.string,
+        replaceField: PropTypes.string
+      }))
     }),
     hideDocs: PropTypes.bool,
     hideSettings: PropTypes.bool,
@@ -136,9 +143,10 @@ export default class Voyager extends React.Component<VoyagerProps> {
   updateIntrospection(introspectionData, displayOptions) {
     const schema = getSchema(
       introspectionData,
-      displayOptions.sortByAlphabet,
-      displayOptions.skipRelay,
+      displayOptions.sortByAlphabet,      
       displayOptions.skipDeprecated,
+      displayOptions.showHidden,
+      displayOptions.hideRules
     );
     const typeGraph = getTypeGraph(
       schema,

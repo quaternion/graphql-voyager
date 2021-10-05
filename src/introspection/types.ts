@@ -1,4 +1,4 @@
-import { IntrospectionEnumValue } from 'graphql';
+import { IntrospectionEnumValue } from 'graphql'
 
 export type SimplifiedArg = {
   name: string;
@@ -20,9 +20,6 @@ export type SimplifiedField<T> = {
   args: {
     [name: string]: SimplifiedArg;
   };
-  relayArgs: {
-    [name: string]: SimplifiedArg;
-  };
 };
 
 export type SimplifiedInputField = SimplifiedArg;
@@ -35,8 +32,10 @@ export type SimplifiedTypeBase = {
   inputFields?: {
     [name: string]: SimplifiedInputField;
   };
-
-  isRelayType?: boolean;
+  isHiddenType?: boolean;
+  hiddenOptions?: {
+    replaceField: string
+  };
 };
 
 export type SimplifiedType = SimplifiedTypeBase & {

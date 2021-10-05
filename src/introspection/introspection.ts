@@ -1,17 +1,14 @@
-import * as _ from 'lodash';
 import {
   buildClientSchema,
   introspectionFromSchema,
-  lexicographicSortSchema,
   IntrospectionSchema,
   IntrospectionType,
-} from 'graphql';
-import {
-  SimplifiedIntrospection,
-  SimplifiedIntrospectionWithIds,
-  SimplifiedType,
-} from './types';
-import { typeNameToId } from './utils';
+  lexicographicSortSchema,
+} from 'graphql'
+import * as _ from 'lodash'
+
+import { SimplifiedIntrospection, SimplifiedIntrospectionWithIds, SimplifiedType } from './types'
+import { typeNameToId } from './utils'
 
 function unwrapType(type, wrappers) {
   while (type.kind === 'NON_NULL' || type.kind == 'LIST') {
@@ -103,81 +100,34 @@ function simplifySchema(
   };
 }
 
-function markRelayTypes(schema: SimplifiedIntrospectionWithIds): void {
-  const nodeType = schema.types[typeNameToId('Node')];
-  if (nodeType) nodeType.isRelayType = true;
-
-  const pageInfoType = schema.types[typeNameToId('PageInfo')];
-  if (pageInfoType) pageInfoType.isRelayType = true;
-
-  const edgeTypesMap = {};
-
-  _.each(schema.types, (type) => {
-    if (!_.isEmpty(type.interfaces)) {
-      type.interfaces = _.reject(
-        type.interfaces,
-        (baseType) => baseType.type.name === 'Node',
-      );
-    }
-
-    _.each(type.fields, (field) => {
-      const connectionType = field.type;
-      if (
-        !/.Connection$/.test(connectionType.name) ||
-        connectionType.kind !== 'OBJECT' ||
-        !connectionType.fields.edges
-      ) {
-        return;
+function markHiddenTypes(schema: SimplifiedIntrospectionWithIds, hideRules: {
+  pattern: string
+  proxyField?: string
+}[]): void {
+  _.each(schema.types, type => {
+    _.each(hideRules, hideRule => {
+      const patternRegExp = new RegExp(hideRule.pattern)
+      if (patternRegExp.test(type.name)) {
+        type.isHiddenType = true
+        if (hideRule.proxyField) {
+          type.hiddenOptions = { replaceField: hideRule.proxyField }
+        }
       }
-
-      const edgesType = connectionType.fields.edges.type;
-      if (edgesType.kind !== 'OBJECT' || !edgesType.fields.node) {
-        return;
-      }
-
-      const nodeType = edgesType.fields.node.type;
-
-      connectionType.isRelayType = true;
-      edgesType.isRelayType = true;
-
-      edgeTypesMap[edgesType.name] = nodeType;
-
-      field.relayType = field.type;
-      field.type = nodeType;
-      field.typeWrappers = ['LIST'];
-
-      const relayArgNames = ['first', 'last', 'before', 'after'];
-      const isRelayArg = (arg) => relayArgNames.includes(arg.name);
-      field.relayArgs = _.pickBy(field.args, isRelayArg);
-      field.args = _.omitBy(field.args, isRelayArg);
-    });
+    })
   });
 
-  _.each(schema.types, (type) => {
-    _.each(type.fields, (field) => {
-      var realType = edgeTypesMap[field.type.name];
-      if (realType === undefined) return;
-
-      field.relayType = field.type;
-      field.type = realType;
+  _.each(schema.types, type => {
+    if (type.isHiddenType) return;
+    
+    _.each(type.fields, field => {
+      if (field.type.isHiddenType && field.type.hiddenOptions) {
+        const proxyFieldName = field.type.hiddenOptions.replaceField
+        const proxyType = field.type.fields[proxyFieldName].type
+        field.typeWrappers = field.type.fields[proxyFieldName].typeWrappers
+        field.type = proxyType
+      }
     });
   });
-
-  const { queryType } = schema;
-  let query = schema.types[queryType.id];
-
-  if (_.get(query, 'fields.node.type.isRelayType')) {
-    delete query.fields['node'];
-  }
-
-  //GitHub use `nodes` instead of `node`.
-  if (_.get(query, 'fields.nodes.type.isRelayType')) {
-    delete query.fields['nodes'];
-  }
-
-  if (_.get(query, 'fields.relay.type') === queryType) {
-    delete query.fields['relay'];
-  }
 }
 
 function markDeprecated(schema: SimplifiedIntrospectionWithIds): void {
@@ -247,8 +197,12 @@ function assignTypesAndIDs(schema: SimplifiedIntrospection) {
 export function getSchema(
   introspection: any,
   sortByAlphabet: boolean,
-  skipRelay: boolean,
   skipDeprecated: boolean,
+  showHidden: boolean,
+  hideRules: {
+    pattern: string
+    replaceField?: string
+  }[]
 ) {
   if (!introspection) return null;
 
@@ -262,9 +216,10 @@ export function getSchema(
 
   assignTypesAndIDs(simpleSchema);
 
-  if (skipRelay) {
-    markRelayTypes((<any>simpleSchema) as SimplifiedIntrospectionWithIds);
+  if (!showHidden && hideRules.length) {
+    markHiddenTypes((<any>simpleSchema) as SimplifiedIntrospectionWithIds, hideRules);
   }
+
   if (skipDeprecated) {
     markDeprecated((<any>simpleSchema) as SimplifiedIntrospectionWithIds);
   }

@@ -1,17 +1,16 @@
-import * as React from 'react';
-import { render } from 'react-dom';
+import './components.css'
 
-import Button from '@material-ui/core/Button';
-import { MuiThemeProvider } from '@material-ui/core/styles';
+import Button from '@material-ui/core/Button'
+import { MuiThemeProvider } from '@material-ui/core/styles'
+import * as React from 'react'
+import { render } from 'react-dom'
 
-import { theme } from '../src/components/MUITheme';
-import { GraphQLVoyager } from '../src';
-import LogoIcon from './icons/logo-small.svg';
-
-import { IntrospectionModal } from './IntrospectionModal';
-import { defaultPreset } from './presets';
-
-import './components.css';
+import { GraphQLVoyager } from '../src'
+import { theme } from '../src/components/MUITheme'
+import { VoyagerDisplayOptions } from '../src/components/Voyager'
+import LogoIcon from './icons/logo-small.svg'
+import { IntrospectionModal } from './IntrospectionModal'
+import { defaultPreset } from './presets'
 
 export default class Demo extends React.Component {
   state = {
@@ -23,6 +22,7 @@ export default class Demo extends React.Component {
     super(props);
 
     const { url, withCredentials } = getQueryParams();
+    
     if (url) {
       this.state.introspection = (introspectionQuery) =>
         fetch(url, {
@@ -42,6 +42,46 @@ export default class Demo extends React.Component {
   public render() {
     const { changeSchemaModalOpen, introspection } = this.state;
 
+    const displayOptions: VoyagerDisplayOptions = { 
+      // hideRoot: true,
+      hideRules: [
+        {
+          pattern: '^Money$'
+        },
+        {
+          pattern: '^Measure$'
+        },
+        {
+          pattern: '^PersonName$'
+        },
+        {
+          pattern: '^Discount$'
+        },
+        {
+          pattern: '^Address$'
+        },
+        {
+          pattern: '^Entity$'
+        },
+        {
+          pattern: '^Interval$'
+        },
+        {
+          pattern: '^Timezone$'
+        },
+        {
+          pattern: '^DepotAmount$'
+        },
+        {
+          pattern: '^.+Page$',
+          proxyField: 'items'
+        },
+        {
+          pattern: '^FileObject$'
+        }
+      ]
+  }
+
     const openChangeSchema = () =>
       this.setState({ changeSchemaModalOpen: true });
     const closeChangeSchema = () =>
@@ -49,7 +89,7 @@ export default class Demo extends React.Component {
 
     return (
       <MuiThemeProvider theme={theme}>
-        <GraphQLVoyager introspection={introspection}>
+        <GraphQLVoyager introspection={introspection} displayOptions={displayOptions}>
           <GraphQLVoyager.PanelHeader>
             <div className="voyager-panel">
               <Logo />

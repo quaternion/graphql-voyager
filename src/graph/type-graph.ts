@@ -11,7 +11,8 @@ export function isNode(type) {
     isScalarType(type) ||
     isInputObjectType(type) ||
     isSystemType(type) ||
-    type.isRelayType
+    type.isRelayType ||
+    type.isHiddenType
   );
 }
 

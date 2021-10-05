@@ -1,6 +1,7 @@
-import * as React from 'react';
-import Checkbox from '@material-ui/core/Checkbox';
-import RootSelector from './RootSelector';
+import Checkbox from '@material-ui/core/Checkbox'
+import * as React from 'react'
+
+import RootSelector from './RootSelector'
 
 interface SettingsProps {
   schema: any;
@@ -32,12 +33,19 @@ export default class Settings extends React.Component<SettingsProps> {
           />
           <label htmlFor="sort">Sort by Alphabet</label>
           <Checkbox
-            id="skip"
+            id="hide-root"
             color="primary"
-            checked={!!options.skipRelay}
-            onChange={(event) => onChange({ skipRelay: event.target.checked })}
+            checked={!!options.hideRoot}
+            onChange={(event) => onChange({ hideRoot: event.target.checked })}
           />
-          <label htmlFor="skip">Skip Relay</label>
+          <label htmlFor="hide-root">Hide Root</label>
+          <Checkbox
+            id="show-hidden"
+            color="primary"
+            checked={!!options.showHidden}
+            onChange={(event) => onChange({ showHidden: event.target.checked })}
+          />
+          <label htmlFor="skip">Show Hidden</label>
           <Checkbox
             id="deprecated"
             color="primary"
